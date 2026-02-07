@@ -61,7 +61,7 @@ jobs:
         run: |
           helm package charts/gate \
             --version "${{ steps.chart.outputs.version }}" \
-            --app-version "${{ steps.chart.outputs.version }}"
+            --app-version "${{ github.ref_name }}"
 
       - name: Push Helm chart (OCI)
         run: helm push "gate-${{ steps.chart.outputs.version }}.tgz" "oci://ghcr.io/${{ github.repository }}"

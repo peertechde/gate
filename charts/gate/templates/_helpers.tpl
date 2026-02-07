@@ -20,6 +20,16 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 {{- end -}}
 
+{{- define "gate.imageTag" -}}
+{{- if .Values.image.tag -}}
+{{- .Values.image.tag -}}
+{{- else if hasPrefix "v" .Chart.AppVersion -}}
+{{- .Chart.AppVersion -}}
+{{- else -}}
+{{- printf "v%s" .Chart.AppVersion -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "gate.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "gate.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
