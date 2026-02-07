@@ -9,6 +9,9 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+labels:
+  managedBy: true
+
 serviceAccount:
   create: true
   name: ""

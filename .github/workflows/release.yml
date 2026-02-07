@@ -72,7 +72,8 @@ jobs:
             --namespace gate-system \
             --include-crds \
             --set image.repository=ghcr.io/${{ github.repository }} \
-            --set image.tag=${{ steps.chart.outputs.version }} \
+            --set image.tag=${{ github.ref_name }} \
+            --set labels.managedBy=false \
             > release.yaml
 
       - name: Create GitHub Release

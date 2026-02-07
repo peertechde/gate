@@ -15,7 +15,9 @@
 app.kubernetes.io/name: {{ include "gate.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- if (default true .Values.labels.managedBy) }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
 {{- end -}}
 
 {{- define "gate.selectorLabels" -}}
