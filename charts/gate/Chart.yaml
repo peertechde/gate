@@ -1,0 +1,6 @@
+apiVersion: v2
+name: gate
+description: Gate SSH access to Kubernetes API over a restricted tunnel.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

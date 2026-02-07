@@ -1,0 +1,123 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gate.fullname" . }}
+  labels:
+    {{- include "gate.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "gate.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gate.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "gate.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: gate
+          image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --http-address={{ .Values.http.address }}
+            - --http-read-timeout={{ .Values.http.readTimeout }}
+            - --http-read-header-timeout={{ .Values.http.readHeaderTimeout }}
+            - --http-write-timeout={{ .Values.http.writeTimeout }}
+            - --http-idle-timeout={{ .Values.http.idleTimeout }}
+            - --http-request-timeout={{ .Values.http.requestTimeout }}
+            - --http-stop-timeout={{ .Values.http.stopTimeout }}
+            - --metrics-enabled={{ .Values.metrics.enabled }}
+            - --log-level={{ .Values.log.level }}
+            - --kube-qps={{ .Values.kube.qps }}
+            - --kube-burst={{ .Values.kube.burst }}
+            - --kube-timeout={{ .Values.kube.timeout }}
+            - --kube-cache-sync-timeout={{ .Values.kube.cacheSyncTimeout }}
+            - --kube-cache-resync-period={{ .Values.kube.cacheResyncPeriod }}
+            - --user-namespace={{ include "gate.userNamespace" . }}
+            - --hostkey-secret-name={{ .Values.config.hostKeySecretName }}
+            - --hostkey-secret-namespace={{ include "gate.hostKeyNamespace" . }}
+            - --hostkey-secret-key={{ .Values.config.hostKeySecretKey }}
+            - --hostkey-bootstrap={{ .Values.config.hostKeyBootstrap }}
+            - --ssh-address={{ .Values.ssh.address }}
+            - --ssh-auth-timeout={{ .Values.ssh.authTimeout }}
+            - --ssh-dial-timeout={{ .Values.ssh.dialTimeout }}
+            - --ssh-stop-timeout={{ .Values.ssh.stopTimeout }}
+            - --max-concurrent-sessions={{ .Values.limits.maxConcurrentSessions }}
+            - --max-session-duration={{ .Values.limits.maxSessionDuration }}
+            {{ if .Values.config.apiServer.host }}
+            - --api-server-host={{ .Values.config.apiServer.host }}
+            {{ end }}
+            {{ if gt (int .Values.config.apiServer.port) 0 }}
+            - --api-server-port={{ .Values.config.apiServer.port }}
+            {{ end }}
+            {{ if .Values.config.apiServer.aliases }}
+            - --api-server-aliases={{ join "," .Values.config.apiServer.aliases }}
+            {{ end }}
+            {{ if and .Values.oidc.issuerURL .Values.oidc.clientID }}
+            - --oidc-issuer-url={{ .Values.oidc.issuerURL }}
+            - --oidc-client-id={{ .Values.oidc.clientID }}
+            {{ if .Values.oidc.clientSecret }}
+            - --oidc-client-secret={{ .Values.oidc.clientSecret }}
+            {{ end }}
+            - --oidc-scopes={{ join "," .Values.oidc.scopes }}
+            - --oidc-group-claim={{ .Values.oidc.groupClaim }}
+            - --oidc-device-timeout={{ .Values.oidc.deviceTimeout }}
+            - --oidc-http-timeout={{ .Values.oidc.httpTimeout }}
+            {{ end }}
+          ports:
+            - name: ssh
+              containerPort: 2222
+              protocol: TCP
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,94 @@
+{{- if .Values.rbac.create -}}
+{{- $userNs := include "gate.userNamespace" . -}}
+{{- $hostNs := include "gate.hostKeyNamespace" . -}}
+{{- if eq $userNs $hostNs }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "gate.fullname" . }}
+  namespace: {{ $userNs }}
+  labels:
+    {{- include "gate.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["gate.peertech.de"]
+    resources: ["users"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["{{ .Values.config.hostKeySecretName }}"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "gate.fullname" . }}
+  namespace: {{ $userNs }}
+  labels:
+    {{- include "gate.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "gate.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "gate.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- else }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "gate.fullname" . }}-user
+  namespace: {{ $userNs }}
+  labels:
+    {{- include "gate.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["gate.peertech.de"]
+    resources: ["users"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "gate.fullname" . }}-user
+  namespace: {{ $userNs }}
+  labels:
+    {{- include "gate.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "gate.fullname" . }}-user
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "gate.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "gate.fullname" . }}-hostkey
+  namespace: {{ $hostNs }}
+  labels:
+    {{- include "gate.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["{{ .Values.config.hostKeySecretName }}"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "gate.fullname" . }}-hostkey
+  namespace: {{ $hostNs }}
+  labels:
+    {{- include "gate.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "gate.fullname" . }}-hostkey
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "gate.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- end }}

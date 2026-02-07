@@ -1,0 +1,100 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.0
+  name: users.gate.peertech.de
+spec:
+  group: gate.peertech.de
+  names:
+    kind: User
+    listKind: UserList
+    plural: users
+    shortNames:
+    - gateuser
+    singular: user
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.userName
+      name: User
+      type: string
+    - jsonPath: .spec.enabled
+      name: Enabled
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: User is the Schema for the Gate users API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: UserSpec defines the desired state of a Gate user.
+            properties:
+              auth:
+                description: Auth controls additional authentication requirements.
+                properties:
+                  ssoRequired:
+                    description: SSORequired enforces OIDC device-flow login in addition
+                      to SSH keys.
+                    type: boolean
+                type: object
+              enabled:
+                default: true
+                description: Enabled controls whether the user is permitted to authenticate.
+                type: boolean
+              oidc:
+                description: OIDC binds the user to allowed OIDC identities/groups.
+                properties:
+                  groups:
+                    description: Groups is the list of allowed OIDC group names (exact
+                      match).
+                    items:
+                      type: string
+                    type: array
+                  subjects:
+                    description: Subjects is the list of allowed OIDC subject identifiers.
+                    items:
+                      type: string
+                    minItems: 1
+                    type: array
+                type: object
+              publicKeys:
+                description: PublicKeys is the list of allowed SSH public keys for
+                  the user.
+                items:
+                  type: string
+                minItems: 1
+                type: array
+              userName:
+                description: UserName is the user identity mapped from SSH public
+                  keys.
+                minLength: 1
+                type: string
+            required:
+            - publicKeys
+            - userName
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources: {}

@@ -1,0 +1,109 @@
+replicaCount: 1
+
+image:
+  repository: "peertech/gate"
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+
+rbac:
+  create: true
+
+ssh:
+  address: ":2222"
+  authTimeout: "10s"
+  dialTimeout: "10s"
+  stopTimeout: "10s"
+  service:
+    type: LoadBalancer
+    port: 2222
+    annotations: {}
+    loadBalancerSourceRanges: []
+
+http:
+  address: ":8080"
+  readTimeout: "5s"
+  readHeaderTimeout: "5s"
+  writeTimeout: "10s"
+  idleTimeout: "30s"
+  requestTimeout: "10s"
+  stopTimeout: "10s"
+  service:
+    type: ClusterIP
+    port: 8080
+    annotations: {}
+
+metrics:
+  enabled: true
+
+log:
+  level: "info"
+
+kube:
+  qps: 5
+  burst: 10
+  timeout: "5s"
+  cacheSyncTimeout: "10s"
+  cacheResyncPeriod: "10m"
+
+config:
+  userNamespace: ""
+  hostKeyNamespace: ""
+  hostKeySecretName: "gate-host-key"
+  hostKeySecretKey: "ssh_host_key"
+  hostKeyBootstrap: false
+  apiServer:
+    host: ""
+    port: 0
+    aliases: []
+
+limits:
+  maxConcurrentSessions: 100
+  maxSessionDuration: "0s"
+
+oidc:
+  issuerURL: ""
+  clientID: ""
+  clientSecret: ""
+  scopes:
+    - "openid"
+    - "profile"
+    - "email"
+  groupClaim: "groups"
+  deviceTimeout: "2m"
+  httpTimeout: "5s"
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext:
+  runAsNonRoot: true
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+networkPolicy:
+  enabled: false
+  sshIngressCIDRs: []
+  httpIngressNamespaceSelector: {}
+  allowAllEgress: true
+  egressCIDRs: []
+  egressPorts: []

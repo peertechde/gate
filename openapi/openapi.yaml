@@ -1,0 +1,387 @@
+openapi: 3.0.3
+info:
+  title: Gate Control API
+  version: 0.1.0
+  description: |
+    Control-plane API for listing and terminating active SSH sessions.
+    Health endpoints (/healthz, /livez, /readyz) are not part of this spec.
+servers:
+  - url: /
+tags:
+  - name: Sessions
+    description: Session listing, details, and termination.
+paths:
+  /api/v1/sessions:
+    get:
+      tags:
+        - Sessions
+      operationId: listSessions
+      summary: List active sessions
+      description: |
+        Returns active sessions sorted by start_time desc by default.
+        Server enforces request deadlines; clients should set timeouts.
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/offset"
+        - $ref: "#/components/parameters/order_by"
+      responses:
+        "200":
+          description: A page of sessions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionListResponse"
+              examples:
+                default:
+                  summary: Two active sessions
+                  value:
+                    sessions:
+                      - session_id: "0f3e7d6e-7b5e-4c72-9c3b-5c5b1c9a1a11"
+                        user_name: "alice"
+                        public_key_fingerprint: "SHA256:abc123"
+                        source_ip: "203.0.113.10"
+                        start_time: "2026-02-02T18:10:00Z"
+                        state: "active"
+                      - session_id: "8b2f3a3e-8f2d-4e2a-9f0c-9a8a1c2b3d44"
+                        user_name: "bob"
+                        public_key_fingerprint: "SHA256:def456"
+                        source_ip: "2001:db8::10"
+                        start_time: "2026-02-02T18:20:00Z"
+                        state: "active"
+        "400":
+          $ref: "#/components/responses/ErrorInvalidArgument"
+        "401":
+          $ref: "#/components/responses/ErrorUnauthenticated"
+        "403":
+          $ref: "#/components/responses/ErrorPermissionDenied"
+        "429":
+          $ref: "#/components/responses/ErrorRateLimited"
+        "500":
+          $ref: "#/components/responses/ErrorInternal"
+        "503":
+          $ref: "#/components/responses/ErrorDependencyUnavailable"
+  /api/v1/sessions/{session_id}:
+    get:
+      tags:
+        - Sessions
+      operationId: getSession
+      summary: Get session details
+      description: |
+        Fetches a single session by ID.
+        Server enforces request deadlines; clients should set timeouts.
+      parameters:
+        - $ref: "#/components/parameters/session_id"
+      responses:
+        "200":
+          description: Session details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+              examples:
+                active:
+                  summary: Active session
+                  value:
+                    session_id: "0f3e7d6e-7b5e-4c72-9c3b-5c5b1c9a1a11"
+                    user_name: "alice"
+                    public_key_fingerprint: "SHA256:abc123"
+                    source_ip: "203.0.113.10"
+                    start_time: "2026-02-02T18:10:00Z"
+                    state: "active"
+        "400":
+          $ref: "#/components/responses/ErrorInvalidArgument"
+        "401":
+          $ref: "#/components/responses/ErrorUnauthenticated"
+        "403":
+          $ref: "#/components/responses/ErrorPermissionDenied"
+        "404":
+          $ref: "#/components/responses/ErrorNotFound"
+        "429":
+          $ref: "#/components/responses/ErrorRateLimited"
+        "500":
+          $ref: "#/components/responses/ErrorInternal"
+        "503":
+          $ref: "#/components/responses/ErrorDependencyUnavailable"
+  /api/v1/sessions/{session_id}:terminate:
+    post:
+      tags:
+        - Sessions
+      operationId: terminateSession
+      summary: Terminate a session
+      description: |
+        Idempotently terminates a session and returns the latest session state.
+        Server enforces request deadlines; clients should set timeouts.
+      parameters:
+        - $ref: "#/components/parameters/session_id"
+      responses:
+        "200":
+          description: Session terminated or already terminated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+              examples:
+                terminated:
+                  summary: Terminated session
+                  value:
+                    session_id: "0f3e7d6e-7b5e-4c72-9c3b-5c5b1c9a1a11"
+                    user_name: "alice"
+                    public_key_fingerprint: "SHA256:abc123"
+                    source_ip: "203.0.113.10"
+                    start_time: "2026-02-02T18:10:00Z"
+                    end_time: "2026-02-02T18:30:00Z"
+                    state: "terminated"
+                    termination_reason: "admin_terminated"
+        "400":
+          $ref: "#/components/responses/ErrorInvalidArgument"
+        "401":
+          $ref: "#/components/responses/ErrorUnauthenticated"
+        "403":
+          $ref: "#/components/responses/ErrorPermissionDenied"
+        "404":
+          $ref: "#/components/responses/ErrorNotFound"
+        "429":
+          $ref: "#/components/responses/ErrorRateLimited"
+        "500":
+          $ref: "#/components/responses/ErrorInternal"
+        "503":
+          $ref: "#/components/responses/ErrorDependencyUnavailable"
+components:
+  parameters:
+    session_id:
+      name: session_id
+      in: path
+      required: true
+      description: Session identifier.
+      schema:
+        type: string
+        format: uuid
+    limit:
+      name: limit
+      in: query
+      required: false
+      description: |
+        Maximum number of sessions to return. Defaults to 50 and is capped at 200.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+      x-configurable: true
+    offset:
+      name: offset
+      in: query
+      required: false
+      description: |
+        Number of sessions to skip before returning results. Defaults to 0.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    order_by:
+      name: order_by
+      in: query
+      required: false
+      description: |
+        Sort order. Default: start_time desc.
+      schema:
+        type: string
+        default: "start_time desc"
+        enum:
+          - "start_time desc"
+          - "start_time asc"
+  responses:
+    ErrorInvalidArgument:
+      description: Invalid request parameters.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            invalid_argument:
+              summary: Invalid argument
+              value:
+                code: invalid_argument
+                message: "limit must be between 1 and 200"
+                details:
+                  field: "limit"
+                request_id: "req_01HZY7N9Q6ZB8W6W2Y2GZQ8G2M"
+    ErrorUnauthenticated:
+      description: Authentication is required and has failed or has not been provided.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            unauthenticated:
+              summary: Unauthenticated
+              value:
+                code: unauthenticated
+                message: "authentication required"
+                details: {}
+                request_id: "req_01HZY7N9Q6ZB8W6W2Y2GZQ8G2M"
+    ErrorPermissionDenied:
+      description: The caller does not have permission to perform this action.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            permission_denied:
+              summary: Permission denied
+              value:
+                code: permission_denied
+                message: "access denied"
+                details: {}
+                request_id: "req_01HZY7N9Q6ZB8W6W2Y2GZQ8G2M"
+    ErrorNotFound:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            not_found:
+              summary: Not found
+              value:
+                code: not_found
+                message: "session not found"
+                details:
+                  session_id: "0f3e7d6e-7b5e-4c72-9c3b-5c5b1c9a1a11"
+                request_id: "req_01HZY7N9Q6ZB8W6W2Y2GZQ8G2M"
+    ErrorRateLimited:
+      description: Too many requests; retry with backoff.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            rate_limited:
+              summary: Rate limited
+              value:
+                code: rate_limited
+                message: "too many requests"
+                details:
+                  retry_after_seconds: 1
+                request_id: "req_01HZY7N9Q6ZB8W6W2Y2GZQ8G2M"
+    ErrorDependencyUnavailable:
+      description: A required dependency is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            dependency_unavailable:
+              summary: Dependency unavailable
+              value:
+                code: dependency_unavailable
+                message: "identity cache unavailable"
+                details: {}
+                request_id: "req_01HZY7N9Q6ZB8W6W2Y2GZQ8G2M"
+    ErrorInternal:
+      description: An unexpected internal error occurred.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            internal:
+              summary: Internal error
+              value:
+                code: internal
+                message: "internal error"
+                details: {}
+                request_id: "req_01HZY7N9Q6ZB8W6W2Y2GZQ8G2M"
+  schemas:
+    Session:
+      type: object
+      additionalProperties: false
+      required:
+        - session_id
+        - user_name
+        - public_key_fingerprint
+        - source_ip
+        - start_time
+        - state
+      properties:
+        session_id:
+          type: string
+          format: uuid
+          description: Session identifier.
+        user_name:
+          type: string
+          description: User identity derived from the User CRD.
+        public_key_fingerprint:
+          type: string
+          description: SSH public key fingerprint (SHA256).
+        source_ip:
+          type: string
+          description: Source IP address (IPv4 or IPv6).
+        start_time:
+          type: string
+          format: date-time
+          description: Session start time (UTC).
+        end_time:
+          type: string
+          format: date-time
+          description: Session end time (UTC); omitted while active.
+        state:
+          $ref: "#/components/schemas/SessionState"
+        termination_reason:
+          $ref: "#/components/schemas/TerminationReason"
+    SessionState:
+      type: string
+      description: Session lifecycle state.
+      enum:
+        - active
+        - terminated
+    TerminationReason:
+      type: string
+      description: Reason a session was terminated.
+      enum:
+        - revoked
+        - admin_terminated
+        - max_duration
+        - error
+    SessionListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - sessions
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Session"
+    ErrorCode:
+      type: string
+      description: Stable error codes.
+      enum:
+        - invalid_argument
+        - unauthenticated
+        - permission_denied
+        - not_found
+        - conflict
+        - rate_limited
+        - dependency_unavailable
+        - internal
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+        - request_id
+      properties:
+        code:
+          $ref: "#/components/schemas/ErrorCode"
+        message:
+          type: string
+          description: Human-readable error message.
+        details:
+          type: object
+          additionalProperties: true
+          description: Optional structured error details.
+        request_id:
+          type: string
+          description: Server-generated request identifier.

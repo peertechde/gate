@@ -1,0 +1,9 @@
+.git
+.ai
+bin
+charts
+config
+hack
+openapi
+**/*_test.go
+**/*.md

@@ -1,0 +1,58 @@
+{{- if .Values.networkPolicy.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "gate.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "gate.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "gate.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    {{- if not .Values.networkPolicy.allowAllEgress }}
+    - Egress
+    {{- end }}
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 2222
+      {{- if .Values.networkPolicy.sshIngressCIDRs }}
+      from:
+        {{- range .Values.networkPolicy.sshIngressCIDRs }}
+        - ipBlock:
+            cidr: {{ . }}
+        {{- end }}
+      {{- end }}
+    - ports:
+        - protocol: TCP
+          port: 8080
+      {{- if .Values.networkPolicy.httpIngressNamespaceSelector }}
+      from:
+        - namespaceSelector:
+            {{- toYaml .Values.networkPolicy.httpIngressNamespaceSelector | nindent 12 }}
+      {{- end }}
+  {{- if not .Values.networkPolicy.allowAllEgress }}
+  {{- if or .Values.networkPolicy.egressCIDRs .Values.networkPolicy.egressPorts }}
+  egress:
+    - {{- if .Values.networkPolicy.egressCIDRs }}
+      to:
+        {{- range .Values.networkPolicy.egressCIDRs }}
+        - ipBlock:
+            cidr: {{ . }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.networkPolicy.egressPorts }}
+      ports:
+        {{- range .Values.networkPolicy.egressPorts }}
+        - protocol: TCP
+          port: {{ . }}
+        {{- end }}
+      {{- end }}
+  {{- else }}
+  egress: []
+  {{- end }}
+  {{- end }}
+{{- end }}
