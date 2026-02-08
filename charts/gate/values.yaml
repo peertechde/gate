@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: "peertech/gate"
+  repository: "ghcr.io/peertechde/gate"
   tag: ""
   pullPolicy: IfNotPresent
 
