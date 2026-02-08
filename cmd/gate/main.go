@@ -155,6 +155,7 @@ func Setup() (*App, error) {
 		AllowedPort:    cfg.APIServer.Port,
 		AllowedAliases: cfg.APIServer.AllowedAliases,
 		OIDC:           oidcAuth,
+		Metrics:        metricsRegistry,
 	}
 
 	return &App{
